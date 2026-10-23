@@ -12,22 +12,45 @@ knitr::opts_chunk$set(echo = TRUE)
 #Load in libraries
 library(tidyverse)
 library(dplyr)
+library(sqldf)
+library(data.table)
 ```
 
 ```{r}
-GeneCovariate=read.csv("C:/Users/Anisha/Downloads/GSE85307_covar-1.csv", row.names=1)
-GeneExpression= read.csv("C:/Users/Anisha/Downloads/GSE85307_geneExpression.csv", row.names = 1)
-GeneName= read.csv("C:/Users/Anisha/Downloads/GSE85307_geneNames.csv", row.names = 1)
+GeneCovariate=read.csv(file="GSE85307_covar-1.csv", row.names=1)
+GeneExpression= read.csv(file="GSE85307_geneExpression.csv", row.names = 1)
+GeneName= read.csv(file="GSE85307_geneNames.csv", row.names = 1)
 ```
 
-
+Create columns for identifiers
 ```{r}
-#Transpose Gene Expression
-TransposedGeneExpression <- t(GeneExpression)
+GeneExpression[,"GeneNumber"] <- rownames(GeneExpression)
+GeneName[,"GeneNumber"] <- rownames(GeneName)
 ```
 
+Joining Gene Expression and Gene Name together
 ```{r}
-#Joining together
-TransposedGeneExpression[geonames] <- TransposedGeneExpression[,1]
+GeneExp_Name<- merge(GeneExpression, GeneName, by="GeneNumber", all=TRUE)
+Clean_GeneExp_Name <- na.omit(GeneExp_Name)
+```
+
+Create row for identifiers
+```{r}
+Clean_GeneExp_Name["geoID",] <- colnames(Clean_GeneExp_Name)
+```
+
+Transpose Gene Expression
+```{r}
+Transp_Clean_GeneExp_Name <- as.data.frame(t(Clean_GeneExp_Name))
+```
+
+Add a column named geoID for identifiers
+```{r}
+Transp_Clean_GeneExp_Name["geoID"] <- rownames(Transp_Clean_GeneExp_Name)
+```
+
+Merge all data together in one dataframe, under geoID
+```{r}
+All_Data<- merge(Transp_Clean_GeneExp_Name, GeneCovariate, by="geoID", all=TRUE)
 ```
 
