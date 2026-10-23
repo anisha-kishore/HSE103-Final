@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 #Load in libraries
 library(tidyverse)
+library(dplyr)
 ```
 
 ```{r}
@@ -21,6 +22,12 @@ GeneName= read.csv("C:/Users/Anisha/Downloads/GSE85307_geneNames.csv", row.names
 
 
 ```{r}
+#Transpose Gene Expression
+TransposedGeneExpression <- t(GeneExpression)
+```
 
+```{r}
+#Joining together
+TransposedGeneExpression[geonames] <- TransposedGeneExpression[,1]
 ```
 
