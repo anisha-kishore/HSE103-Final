@@ -1,0 +1,25 @@
+---
+title: "Final Project Check In 1"
+output: pdf_document
+date: "2026-10-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+GeneCovariate=read.csv("C:/Users/Anisha/Downloads/GSE85307_covar-1.csv", row.names=1)
+GeneExpression= read.csv("C:/Users/Anisha/Downloads/GSE85307_geneExpression.csv", row.names = 1)
+GeneName= read.csv("C:/Users/Anisha/Downloads/GSE85307_geneNames.csv", row.names = 1)
+```
+
+
+```{r}
+
+```
+
