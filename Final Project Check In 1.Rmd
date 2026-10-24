@@ -12,8 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 #Load in libraries
 library(tidyverse)
 library(dplyr)
-library(sqldf)
-library(data.table)
 ```
 
 ```{r}
@@ -24,33 +22,12 @@ GeneName= read.csv(file="GSE85307_geneNames.csv", row.names = 1)
 
 Create columns for identifiers
 ```{r}
-GeneExpression[,"GeneNumber"] <- rownames(GeneExpression)
-GeneName[,"GeneNumber"] <- rownames(GeneName)
+GeneExpression["geoID",]<- colnames(GeneExpression)
+transposedGeneExpression <- as.data.frame((t(GeneExpression)))
+GeneExp_Name <- merge(transposedGeneExpression, GeneCovariate, by="geoID", all=TRUE)
 ```
 
-Joining Gene Expression and Gene Name together
+Pick 1 Gene
 ```{r}
-GeneExp_Name<- merge(GeneExpression, GeneName, by="GeneNumber", all=TRUE)
-Clean_GeneExp_Name <- na.omit(GeneExp_Name)
-```
 
-Create row for identifiers
-```{r}
-Clean_GeneExp_Name["geoID",] <- colnames(Clean_GeneExp_Name)
 ```
-
-Transpose Gene Expression
-```{r}
-Transp_Clean_GeneExp_Name <- as.data.frame(t(Clean_GeneExp_Name))
-```
-
-Add a column named geoID for identifiers
-```{r}
-Transp_Clean_GeneExp_Name["geoID"] <- rownames(Transp_Clean_GeneExp_Name)
-```
-
-Merge all data together in one dataframe, under geoID
-```{r}
-All_Data<- merge(Transp_Clean_GeneExp_Name, GeneCovariate, by="geoID", all=TRUE)
-```
-
