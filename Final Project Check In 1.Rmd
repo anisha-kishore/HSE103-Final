@@ -110,7 +110,8 @@ Pick one gene. First called the gene number so I could find the corresponding ge
 DENND4C<- GeneExp_Cov[,"8154531"]
 ```
 Create Theme and color palette.
-Used same theme that I used in the HW3.
+Used same base theme that I used in the HW3.
+https://stackoverflow.com/questions/40675778/center-plot-title-in-ggplot2
 ```{r}
 newBlankTheme <- theme(
   #Panel.grid to set color and weight for background lines
@@ -124,9 +125,10 @@ newBlankTheme <- theme(
   #Legend.key to set background color of the legend
    legend.key = element_rect(fill = 'white'), 
   #Legend.position to position the legend (on the right of the plot)
-   legend.position = 'right')
+   legend.position = 'right',
+  plot.title=element_text(hjust=0.5))
 
-colorPalette= c("lightblue", "lightpink")
+colorPalette= c("lightblue", "hotpink", "purple", "lightgreen", "yellow")
 ```
 
 Create Histogram
@@ -141,12 +143,12 @@ DENND4C_Histogram
 
 Create Scatterplot
 ```{r}
-DENND4C_Scatterplot <- ggplot(GeneExp_Cov,aes(x = mat_age_yrs, 
-                                          y = DENND4C, color=Asthma)) +  
+DENND4C_Scatterplot <- ggplot(GeneExp_Cov,aes(x = mat_BMI, y = DENND4C, 
+                                              color=BMI_Scale)) +  
   geom_point() +
-  labs(title= "Gestational Age at Delivery compared to DENND4C",
-       x="Maternal Age(yrs)", y="DENND4C")+
-  xlim(18, 40)+
+  labs(title= "Maternal BMI compared to DENND4C",
+       x="Maternal BMI (kg/m^2)", y="DENND4C")+
+  xlim(18, 65)+
   scale_fill_manual(values = colorPalette)+
   newBlankTheme
 
