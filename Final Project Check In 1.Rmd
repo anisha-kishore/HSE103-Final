@@ -21,13 +21,10 @@ GeneExpression= read.csv(file="GSE85307_geneExpression.csv", row.names = 1)
 GeneName= read.csv(file="GSE85307_geneNames.csv", row.names = 1)
 ```
 
-Create a row of column names so I can more easily combine with Gene Covariate
+Create a row of column names so I can more easily combine with Gene Covariate.
+Then, transpose Gene Expression dataframe so the geoID row becomes a geoID column
 ```{r}
 GeneExpression["geoID",]<- colnames(GeneExpression)
-```
-
-Transpose Gene Expression dataframe so the geoID row becomes a geoID column
-```{r}
 transposedGeneExpression <- as.data.frame((t(GeneExpression)))
 ```
 
@@ -35,17 +32,36 @@ Clean Gene Covariate dataframe by removing all text prior to the actual number.
 https://rfortherestofus.com/2024/05/remove-unwanted-texts-with-regex
 ```{r}
 Cleaned_GeneCovariate <- GeneCovariate %>%
-  mutate(
-    mat_age_yrs = str_remove_all(mat_age_yrs, "age_years: "),
-    preg_preeclampsia = str_remove_all(preg_preeclampsia, "pregnancy_condition: "),
-    delivery_gestAge_wks= str_remove_all(delivery_gestAge_wks, "gestation_weeks: "),
-    sampleCollection_gestAge_wks = str_remove_all(sampleCollection_gestAge_wks, "blood_draw_at_gestation_week: "),
-    batch_Microarray= str_remove_all(batch_Microarray, "microarray_hybridization_date: "),
-    mat_BMI = str_remove_all(mat_BMI, "bmi_kg/m2: "),
-    mat_vitD = str_remove_all(mat_vitD, "vitamind_25\\(0h\\)_ng/ml_whole_blood_baseline: "),
-    mat_asthma = str_remove_all(mat_asthma, "asthma_0=healthy_1=asthmatic: "))
+mutate(
+  mat_age_yrs = str_remove_all(mat_age_yrs, "age_years: "),
+  preg_preeclampsia = str_remove_all(preg_preeclampsia, "pregnancy_condition: "),
+  delivery_gestAge_wks= str_remove_all(delivery_gestAge_wks, "gestation_weeks: "),
+  sampleCollection_gestAge_wks = str_remove_all(sampleCollection_gestAge_wks, 
+                                              "blood_draw_at_gestation_week: "),
+  batch_Microarray= str_remove_all(batch_Microarray, 
+                                 "microarray_hybridization_date: "),
+  mat_BMI = str_remove_all(mat_BMI, "bmi_kg/m2: "),
+  mat_vitD = str_remove_all(mat_vitD, 
+                          "vitamind_25\\(0h\\)_ng/ml_whole_blood_baseline: "),
+  mat_asthma = str_remove_all(mat_asthma, "asthma_0=healthy_1=asthmatic: "))
 ```
 
+Transformed mat_asthma to corresponding designation (0 is Healthy, 1 is Asthamatic) as assigned within column.
+Determined all unique values in the batch_Microarray column (commented so it will not rerun), and transformed the column from a character column to a categorical column.
+```{r}
+Cleaned_GeneCovariate$Asthma <- factor(ifelse(Cleaned_GeneCovariate$mat_asthma == 1,'Asthmatic','Healthy'))
+
+#unique(Cleaned_GeneCovariate$batch_Microarray)
+Cleaned_GeneCovariate$batch_Microarray <- 
+  factor(Cleaned_GeneCovariate$batch_Microarray, labels=c("03/15/2013", 
+    "03/19/2013", "03/27/2013", "03/22/2013", "04/04/2013", "03/18/2013", 
+    "03/25/2013", "04/09/2013"))
+
+```
+
+Mutate the dataframes so the columns imported from the Gene Expression dataset are numeric, not characters
+https://stackoverflow.com/questions/67306573/converting-multiple-columns-to-double-type-in-r-using-dplyr
+https://www.geeksforgeeks.org/r-language/convert-multiple-columns-to-numeric-using-dplyr/ 
 ```{r}
 Cleaned_GeneCovariate <- Cleaned_GeneCovariate %>%
   mutate_at(vars(2, 4, 5, 7, 8), as.numeric)
@@ -53,14 +69,9 @@ Cleaned_GeneCovariate <- Cleaned_GeneCovariate %>%
 transposedGeneExpression <- transposedGeneExpression %>%
   mutate(across(1:500, as.numeric))
 ```
-Merge the transposed Gene Expression and the Gene Covariate datasets together
+Merge the transposed Gene Expression and the Gene Covariate datasets together. Dropped mat_asthma variable as this is now represented by Asthma variable.
 ```{r}
-GeneExp_Name <- merge(transposedGeneExpression, GeneCovariate, by="geoID", all=TRUE)
-```
-
-Mutate the combined dataframe so the columns imported from the Gene Expression dataset are numeric, not characters
-https://stackoverflow.com/questions/67306573/converting-multiple-columns-to-double-type-in-r-using-dplyr 
-```{r}
-GeneExp_Name <- GeneExp_Name %>%
-  mutate(across(2:501, as.numeric))
+GeneExp_Cov <- merge(transposedGeneExpression, Cleaned_GeneCovariate, 
+                      by="geoID", all=TRUE) %>%
+  select(-mat_asthma)
 ```
