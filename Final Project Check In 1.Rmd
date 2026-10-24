@@ -8,26 +8,59 @@ date: "2026-10-19"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Load in libraries
 ```{r}
-#Load in libraries
 library(tidyverse)
 library(dplyr)
 ```
 
+Read dataset files
 ```{r}
 GeneCovariate=read.csv(file="GSE85307_covar-1.csv", row.names=1)
 GeneExpression= read.csv(file="GSE85307_geneExpression.csv", row.names = 1)
 GeneName= read.csv(file="GSE85307_geneNames.csv", row.names = 1)
 ```
 
-Create columns for identifiers
+Create a row of column names so I can more easily combine with Gene Covariate
 ```{r}
 GeneExpression["geoID",]<- colnames(GeneExpression)
+```
+
+Transpose Gene Expression dataframe so the geoID row becomes a geoID column
+```{r}
 transposedGeneExpression <- as.data.frame((t(GeneExpression)))
+```
+
+Clean Gene Covariate dataframe by removing all text prior to the actual number.
+https://rfortherestofus.com/2024/05/remove-unwanted-texts-with-regex
+```{r}
+Cleaned_GeneCovariate <- GeneCovariate %>%
+  mutate(
+    mat_age_yrs = str_remove_all(mat_age_yrs, "age_years: "),
+    preg_preeclampsia = str_remove_all(preg_preeclampsia, "pregnancy_condition: "),
+    delivery_gestAge_wks= str_remove_all(delivery_gestAge_wks, "gestation_weeks: "),
+    sampleCollection_gestAge_wks = str_remove_all(sampleCollection_gestAge_wks, "blood_draw_at_gestation_week: "),
+    batch_Microarray= str_remove_all(batch_Microarray, "microarray_hybridization_date: "),
+    mat_BMI = str_remove_all(mat_BMI, "bmi_kg/m2: "),
+    mat_vitD = str_remove_all(mat_vitD, "vitamind_25\\(0h\\)_ng/ml_whole_blood_baseline: "),
+    mat_asthma = str_remove_all(mat_asthma, "asthma_0=healthy_1=asthmatic: "))
+```
+
+```{r}
+Cleaned_GeneCovariate <- Cleaned_GeneCovariate %>%
+  mutate_at(vars(2, 4, 5, 7, 8), as.numeric)
+
+transposedGeneExpression <- transposedGeneExpression %>%
+  mutate(across(1:500, as.numeric))
+```
+Merge the transposed Gene Expression and the Gene Covariate datasets together
+```{r}
 GeneExp_Name <- merge(transposedGeneExpression, GeneCovariate, by="geoID", all=TRUE)
 ```
 
-Pick 1 Gene
+Mutate the combined dataframe so the columns imported from the Gene Expression dataset are numeric, not characters
+https://stackoverflow.com/questions/67306573/converting-multiple-columns-to-double-type-in-r-using-dplyr 
 ```{r}
-
+GeneExp_Name <- GeneExp_Name %>%
+  mutate(across(2:501, as.numeric))
 ```
