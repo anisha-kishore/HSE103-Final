@@ -54,8 +54,8 @@ mutate(
 Transformed mat_asthma to corresponding designation (0 is Healthy, 1 is Asthamatic) as assigned within column.
 Transformed batch_Microarray column from a character column to a categorical column.
 ```{r}
-Cleaned_GeneCovariate$Asthma <- factor
-  (ifelse(Cleaned_GeneCovariate$mat_asthma == 1,'Asthmatic','Healthy'))
+Cleaned_GeneCovariate$Asthma <- factor(ifelse(
+  Cleaned_GeneCovariate$mat_asthma == 1,'Asthmatic','Healthy'))
 
 Cleaned_GeneCovariate$batch_Microarray <- 
   factor(Cleaned_GeneCovariate$batch_Microarray)
@@ -144,7 +144,7 @@ colorPalette= c("darkgreen", "blue", "gold", "hotpink")
 
 Create Histogram
 ```{r}
-DENND4C_Histogram <- ggplot(GeneExp_Cov,aes(y = DENND4C)) +  
+DENND4C_Histogram <- ggplot(GeneExp_Cov,aes(x = DENND4C)) +  
   geom_histogram()+
   scale_color_manual(values = colorPalette)+
   newBlankTheme+
@@ -168,9 +168,15 @@ DENND4C_Scatterplot
 ```
 
 Create Boxplot
+https://www.r-bloggers.com/2023/09/how-to-reorder-boxplots-in-r-a-comprehensive-guide/
 ```{r}
-DENND4C_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = DENND4C, 
-                                  color = VitaminD_Levels)) +
+GeneExp_Cov$BMI_Scale <- factor(GeneExp_Cov$BMI_Scale, levels=c("Underweight", 
+                                  "Normal Weight", "Overweight", "Obese"))
+GeneExp_Cov$VitaminD_Levels <- factor(GeneExp_Cov$VitaminD_Levels, 
+        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))
+
+DENND4C_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = DENND4C,
+    color = VitaminD_Levels)) +
     geom_boxplot()+ 
   scale_color_manual(values = colorPalette)+
   newBlankTheme+
