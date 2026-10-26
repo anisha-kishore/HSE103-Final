@@ -148,15 +148,15 @@ DENND4C_Histogram <- ggplot(GeneExp_Cov,aes(y = DENND4C)) +
   geom_histogram()+
   scale_color_manual(values = colorPalette)+
   newBlankTheme+
-  stat_bin(bins=20)
+  stat_bin(bins=30, binwidth = 0.05)+
+  labs(title="DENND4C Frequency", x="Frequency", y="DENND4C")
 
 DENND4C_Histogram
 ```
 
 Create Scatterplot
 ```{r}
-DENND4C_Scatterplot <- ggplot(GeneExp_Cov,aes(x = mat_BMI, y = DENND4C, 
-                                              color=BMI_Scale)) +  
+DENND4C_Scatterplot <- ggplot(GeneExp_Cov,aes(x = mat_BMI, y = DENND4C)) +  
   geom_point() +
   labs(title= "Maternal BMI compared to DENND4C",
        x="Maternal BMI (kg/m^2)", y="DENND4C")+
@@ -173,7 +173,9 @@ DENND4C_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = DENND4C,
                                   color = VitaminD_Levels)) +
     geom_boxplot()+ 
   scale_color_manual(values = colorPalette)+
-  newBlankTheme
+  newBlankTheme+
+  labs(title="DENND4C Across BMI Classes and Vitamin D Levels", x="BMI Scale",
+       y="DENND4C", color="Vitamin D Levels")
 
 DENND4C_Boxplot
 ```
