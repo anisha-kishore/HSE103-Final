@@ -4,6 +4,7 @@ output: pdf_document
 date: "2026-10-19"
 ---
 In addition to the links provided before each chunk, I used the following as tutoring to create my code. Chat.Dartmouth, Foundations of Data Science Notes, Data Wrangling Notes.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -53,14 +54,14 @@ mutate(
 Transformed mat_asthma to corresponding designation (0 is Healthy, 1 is Asthamatic) as assigned within column.
 Transformed batch_Microarray column from a character column to a categorical column.
 ```{r}
-Cleaned_GeneCovariate$Asthma <- factor(ifelse(Cleaned_GeneCovariate$mat_asthma == 1,'Asthmatic','Healthy'))
+Cleaned_GeneCovariate$Asthma <- factor
+  (ifelse(Cleaned_GeneCovariate$mat_asthma == 1,'Asthmatic','Healthy'))
 
 Cleaned_GeneCovariate$batch_Microarray <- 
   factor(Cleaned_GeneCovariate$batch_Microarray)
 
 ```
-
-Mutate the dataframes so the columns imported from the Gene Covariate dataset and the Gene Expression dataset are numeric, not characters
+Mutate the Gene Expression and Gene Covariate dataframes so the columns imported from the Gene Covariate dataset and the Gene Expression dataset are numeric, not characters
 https://stackoverflow.com/questions/67306573/converting-multiple-columns-to-double-type-in-r-using-dplyr
 https://www.geeksforgeeks.org/r-language/convert-multiple-columns-to-numeric-using-dplyr/ 
 ```{r}
@@ -83,9 +84,11 @@ Create a column called GeneNumber in the GeneName dataset so I can more easily c
 GeneName[,"GeneNumber"] <- rownames(GeneName)
 ```
 
-Create two categorical variable from continuous variable.
+Create three categorical variable from continuous variables.
 Provided cutoff weights for BMI categories: https://pmc.ncbi.nlm.nih.gov/articles/PMC10914897/
 Provided cutoff weeks for trimesters: https://my.clevelandclinic.org/health/articles/pregnancy 
+https://stackoverflow.com/questions/61293089/recoding-continuous-variable-into-categorical-with-specific-categories-in-r-u
+Provided cutoff weeks for Vitamin D: https://pmc.ncbi.nlm.nih.gov/articles/PMC3540805/
 ```{r}
 GeneExp_Cov <- GeneExp_Cov %>%
   mutate(BMI_Scale = case_when(
@@ -102,6 +105,13 @@ GeneExp_Cov <- GeneExp_Cov %>%
       sampleCollection_gestAge_wks<= 28 ~ "Second Trimester",
     sampleCollection_gestAge_wks > 28 ~"Third Trimester"
   ))
+
+GeneExp_Cov <- GeneExp_Cov%>%
+  mutate(VitaminD_Levels = case_when(
+    mat_vitD < 10 ~ "Severe Deficiency",
+    mat_vitD >= 10 & mat_vitD<32 ~ "Insufficiency",
+    mat_vitD>=32 & mat_vitD<100 ~ "Adequacy",
+    mat_vitD>= 100~ "Toxicity"))
 ```
 
 Pick one gene. First called the gene number so I could find the corresponding gene name. Then, extracted the column that corresponds to that gene number (commented out so it would not rerun) and defined that column as the gene name that was extracted from the gene name dataset.
@@ -109,6 +119,7 @@ Pick one gene. First called the gene number so I could find the corresponding ge
 #GeneName[GeneName$GeneNumber==8154531, ]
 DENND4C<- GeneExp_Cov[,"8154531"]
 ```
+
 Create Theme and color palette.
 Used same base theme that I used in the HW3.
 https://stackoverflow.com/questions/40675778/center-plot-title-in-ggplot2
@@ -128,15 +139,16 @@ newBlankTheme <- theme(
    legend.position = 'right',
   plot.title=element_text(hjust=0.5))
 
-colorPalette= c("lightblue", "hotpink", "purple", "lightgreen", "yellow")
+colorPalette= c("darkgreen", "blue", "gold", "hotpink")
 ```
 
 Create Histogram
 ```{r}
 DENND4C_Histogram <- ggplot(GeneExp_Cov,aes(y = DENND4C)) +  
   geom_histogram()+
-  scale_fill_manual(values = colorPalette)+
-  newBlankTheme
+  scale_color_manual(values = colorPalette)+
+  newBlankTheme+
+  stat_bin(bins=20)
 
 DENND4C_Histogram
 ```
@@ -148,8 +160,8 @@ DENND4C_Scatterplot <- ggplot(GeneExp_Cov,aes(x = mat_BMI, y = DENND4C,
   geom_point() +
   labs(title= "Maternal BMI compared to DENND4C",
        x="Maternal BMI (kg/m^2)", y="DENND4C")+
-  xlim(18, 65)+
-  scale_fill_manual(values = colorPalette)+
+  xlim(15, 65)+
+  scale_color_manual(values = colorPalette)+
   newBlankTheme
 
 DENND4C_Scatterplot
@@ -157,9 +169,12 @@ DENND4C_Scatterplot
 
 Create Boxplot
 ```{r}
-DENND4C_Boxplot <- ggplot(GeneExp_Cov,aes(x = mat_age_yrs,
-                                          y = DENND4C, color = Age)) +  
-  # Add points to our scatter plot
-  geom_boxplot()
+DENND4C_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = DENND4C, 
+                                  color = VitaminD_Levels)) +
+    geom_boxplot()+ 
+  scale_color_manual(values = colorPalette)+
+  newBlankTheme
+
+DENND4C_Boxplot
 ```
 
