@@ -15,6 +15,8 @@ library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
+library(car)
+library(gridExtra)
 ```
 
 Read dataset files
@@ -113,17 +115,6 @@ GeneExp_Cov <- GeneExp_Cov%>%
     mat_vitD>= 100~ "Toxicity"))
 ```
 
-Pick one gene. First called the gene number so I could find the corresponding gene name. Then, extracted the column that corresponds to that gene number (commented out so it would not rerun) and defined that column as the gene name that was extracted from the gene name dataset.
-```{r}
-assign(Gene1, GeneName[GeneName$GeneNumber==8154531, 1])
-
-Gene1<- GeneExp_Cov[,"8154531"]
-Gene1
-```
-
-```{r}
-```
-
 Create Theme and color palette.
 Used same base theme that I used in the HW3.
 https://stackoverflow.com/questions/40675778/center-plot-title-in-ggplot2
@@ -146,44 +137,65 @@ newBlankTheme <- theme(
 colorPalette= c("darkgreen", "blue", "gold", "hotpink")
 ```
 
-Create Histogram
+Pick one gene. First called the gene number so I could find the corresponding gene name. Then, extracted the column that corresponds to that gene number (commented out so it would not rerun) and defined that column as the gene name that was extracted from the gene name dataset.
 ```{r}
-DENND4C_Histogram <- ggplot(GeneExp_Cov,aes(x = DENND4C)) +  
-  geom_histogram()+
-  scale_color_manual(values = colorPalette)+
-  newBlankTheme+
-  stat_bin(bins=30, binwidth = 0.05)+
-  labs(title="DENND4C Frequency", x="Frequency", y="DENND4C")
+GeneName[GeneName$GeneNumber==8154531, 1]
+DENND4C <- GeneExp_Cov[,"8154531"]
+
+GeneName[GeneName$GeneNumber==8035095, 1]
+CYP4F11 <- GeneExp_Cov[,"8035095"]
+
+GeneName[GeneName$GeneNumber==8130598, 1]
+LPAL2 <- GeneExp_Cov[,"8130598"]
+
 ```
 
-Create Scatterplot
+Create Function
+https://www.r-bloggers.com/2023/09/how-to-reorder-boxplots-in-r-a-comprehensive-guide/
 https://www.geeksforgeeks.org/r-language/how-to-use-superscript-with-ggplot2-in-r/
 ```{r}
-DENND4C_Scatterplot <- ggplot(GeneExp_Cov,aes(x = mat_BMI, y = DENND4C)) +  
-  geom_point() +
-  labs(title= "Maternal BMI compared to DENND4C")+
-  xlab(bquote('Maternal BMI'(kg/m^2)))+
-  ylab("DENND4C")+
-  xlim(15, 65)+
-  scale_color_manual(values = colorPalette)+
-  newBlankTheme
-```
-
-Create Boxplot
-https://www.r-bloggers.com/2023/09/how-to-reorder-boxplots-in-r-a-comprehensive-guide/
-```{r}
-GeneExp_Cov$BMI_Scale <- factor(GeneExp_Cov$BMI_Scale, levels=c("Underweight", 
-                                  "Normal Weight", "Overweight", "Obese"))
+#Take in Dataframe and Gene Names
+#Gene_Plots <- function(GeneExp_Cov, GeneName, List_of_Genes){
+  
+#Reorder BMI Scale and Vitamin D Scale
+GeneExp_Cov$BMI_Scale <- factor(GeneExp_Cov$BMI_Scale,
+        levels=c("Underweight", "Normal Weight", "Overweight", "Obese"))
 GeneExp_Cov$VitaminD_Levels <- factor(GeneExp_Cov$VitaminD_Levels, 
-        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))
+        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))  
 
-DENND4C_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = DENND4C,
-    color = VitaminD_Levels)) +
-    geom_boxplot()+ 
-  scale_color_manual(values = colorPalette)+
-  newBlankTheme+
-  labs(title="DENND4C Across BMI Classes and Vitamin D Levels", x="BMI Scale",
-       y="DENND4C", color="Vitamin D Levels")
+#Create list of genes
+List_of_Genes <- list(DENND4C, CYP4F11, LPAL2)
 
-DENND4C_Boxplot
+#for loop
+for (gene in List_of_Genes){
+
+  #Histogram
+GeneName_Histogram <- ggplot(GeneExp_Cov, aes(x=gene))+
+  geom_histogram()+ stat_bin(bins=30, binwidth = 0.05)+
+  labs(title="Gene Frequency", x="Frequency", y="Gene Expression")+
+  newBlankTheme+ scale_color_manual(values = colorPalette)
+
+GeneName_Histogram
+
+#Scatterplot
+GeneName_Scatterplot <- ggplot(GeneExp_Cov, aes(x=mat_BMI, y=gene))+
+  geom_point()+ 
+  ggtitle(paste0("Maternal BMI compared to ", length(List_of_Genes)))+ 
+  xlab(bquote('Maternal BMI'(kg/m^2)))+ ylab("Gene")+
+  xlim(15, 65)+
+  newBlankTheme+ scale_color_manual(values = colorPalette)
+GeneName_Scatterplot
+
+
+#Boxplot
+GeneName_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = gene,
+  color = VitaminD_Levels)) +
+  geom_boxplot()+ 
+  labs(title="Gene Across BMI Classes and Vitamin D Levels", x="BMI Scale",
+       y="Gene", color="Vitamin D Levels")+ 
+  scale_color_manual(values = colorPalette)+ newBlankTheme
+
+
+}
+
 ```
