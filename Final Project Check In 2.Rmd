@@ -122,7 +122,7 @@ newBlankTheme <- theme(
   #Panel.grid to set color and weight for background lines
    panel.grid=element_line(colour = "lightgrey", linewidth = rel(0.5)),
   #Axis.line to help set axes color and weight
-   axis.line = element_line(colour = "black", linewidth = rel(1)),
+   #axis.line = element_line(colour = "black", linewidth = rel(1)),
   #Plot.background to set the background color of the plots
    plot.background = element_rect(fill = "white"),
   #panel.background to color the individual panels between the background lines
@@ -149,13 +149,12 @@ colnames(Subset_GeneExp_Cov)[2:4]<- c(GeneName[GeneName$GeneNumber==8154531, 1],
                                  GeneName[GeneName$GeneNumber==8130598, 1])
 ```
 
-
 Create Function
 https://www.r-bloggers.com/2023/09/how-to-reorder-boxplots-in-r-a-comprehensive-guide/
 https://www.geeksforgeeks.org/r-language/how-to-use-superscript-with-ggplot2-in-r/
 https://stackoverflow.com/questions/8174237/selecting-non-consecutive-columns-in-r-tables 
 https://stackoverflow.com/questions/67200484/grid-arrange-side-by-side-plots-being-squished-to-small-size-in-r-markdown
-```{r, fig.height=9}
+```{r, fig.height=12}
 Plots <- function(Subset_GeneExp_Cov, myTestList){
   
 #Reorder BMI Scale and Vitamin D Scale
@@ -191,6 +190,4 @@ return(all_plots)}
 
 plots <- Plots(Subset_GeneExp_Cov = Subset_GeneExp_Cov, myTestList = myTestList)
 grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3)
-
-#plot_grid(plotlist=unlist(plots, recursive=FALSE), ncol=3)
 ```
