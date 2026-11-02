@@ -17,6 +17,7 @@ library(ggplot2)
 library(ggpubr)
 library(car)
 library(gridExtra)
+library(cowplot)
 ```
 
 Read dataset files
@@ -41,7 +42,7 @@ mutate(
   mat_age_yrs = str_remove_all(mat_age_yrs, "age_years: "),
   preg_preeclampsia = str_remove_all(preg_preeclampsia, 
                                      "pregnancy_condition: "),
-  delivery_gestAge_wks= str_remove_all(delivery_gestAge_wks, 
+  delivery_gestAge_wks= str_remove_all(delivery_gestAge_wks,
                                        "gestation_weeks: "),
   sampleCollection_gestAge_wks = str_remove_all(sampleCollection_gestAge_wks, 
                                               "blood_draw_at_gestation_week: "),
@@ -96,16 +97,14 @@ GeneExp_Cov <- GeneExp_Cov %>%
     mat_BMI <= 18.5 ~ "Underweight",
     mat_BMI >18.5 & mat_BMI <25 ~ "Normal Weight",
     mat_BMI  >=25 & mat_BMI <30 ~"Overweight",
-    mat_BMI >=30 ~ "Obese"
-  ))
+    mat_BMI >=30 ~ "Obese"))
 
 GeneExp_Cov <- GeneExp_Cov %>%
   mutate(sampleCollection_trimester = case_when(
     sampleCollection_gestAge_wks <= 13 ~ "First Trimester",
     sampleCollection_gestAge_wks >13 & 
       sampleCollection_gestAge_wks<= 28 ~ "Second Trimester",
-    sampleCollection_gestAge_wks > 28 ~"Third Trimester"
-  ))
+    sampleCollection_gestAge_wks > 28 ~"Third Trimester"))
 
 GeneExp_Cov <- GeneExp_Cov%>%
   mutate(VitaminD_Levels = case_when(
@@ -134,68 +133,64 @@ newBlankTheme <- theme(
    legend.position = 'right',
   plot.title=element_text(hjust=0.5))
 
-colorPalette= c("darkgreen", "blue", "gold", "hotpink")
+colorPalette= c("darkgreen", "blue", "gold2", "hotpink1")
 ```
 
 Pick one gene. First called the gene number so I could find the corresponding gene name. Then, extracted the column that corresponds to that gene number (commented out so it would not rerun) and defined that column as the gene name that was extracted from the gene name dataset.
+
 ```{r}
-GeneName[GeneName$GeneNumber==8154531, 1]
-DENND4C <- GeneExp_Cov[,"8154531"]
+Subset_GeneExp_Cov <- GeneExp_Cov[, c("geoID", "8154531", "8035095", "8130598", 
+      "mat_age_yrs", "preg_preeclampsia","delivery_gestAge_wks", 
+      "sampleCollection_gestAge_wks", "batch_Microarray", "mat_BMI", "mat_vitD", 
+      "Asthma", "BMI_Scale", "sampleCollection_trimester", "VitaminD_Levels" )]
 
-GeneName[GeneName$GeneNumber==8035095, 1]
-CYP4F11 <- GeneExp_Cov[,"8035095"]
-
-GeneName[GeneName$GeneNumber==8130598, 1]
-LPAL2 <- GeneExp_Cov[,"8130598"]
-
+colnames(Subset_GeneExp_Cov)[2:4]<- c(GeneName[GeneName$GeneNumber==8154531, 1],
+                                 GeneName[GeneName$GeneNumber==8035095, 1],
+                                 GeneName[GeneName$GeneNumber==8130598, 1])
 ```
+
 
 Create Function
 https://www.r-bloggers.com/2023/09/how-to-reorder-boxplots-in-r-a-comprehensive-guide/
 https://www.geeksforgeeks.org/r-language/how-to-use-superscript-with-ggplot2-in-r/
-```{r}
-#Take in Dataframe and Gene Names
-#Gene_Plots <- function(GeneExp_Cov, GeneName, List_of_Genes){
+https://stackoverflow.com/questions/8174237/selecting-non-consecutive-columns-in-r-tables 
+https://stackoverflow.com/questions/67200484/grid-arrange-side-by-side-plots-being-squished-to-small-size-in-r-markdown
+```{r, fig.height=9}
+Plots <- function(Subset_GeneExp_Cov, myTestList){
   
 #Reorder BMI Scale and Vitamin D Scale
-GeneExp_Cov$BMI_Scale <- factor(GeneExp_Cov$BMI_Scale,
+Subset_GeneExp_Cov$BMI_Scale <- factor(Subset_GeneExp_Cov$BMI_Scale, 
         levels=c("Underweight", "Normal Weight", "Overweight", "Obese"))
-GeneExp_Cov$VitaminD_Levels <- factor(GeneExp_Cov$VitaminD_Levels, 
-        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))  
+Subset_GeneExp_Cov$VitaminD_Levels <- factor(Subset_GeneExp_Cov$VitaminD_Levels, 
+        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))
 
-#Create list of genes
-List_of_Genes <- list(DENND4C, CYP4F11, LPAL2)
+myTestList <- colnames(Subset_GeneExp_Cov)[2:4]
+all_plots <- list()
 
-#for loop
-for (gene in List_of_Genes){
+for (i in myTestList){
+  Histogram1 <- ggplot(Subset_GeneExp_Cov, aes(x=.data[[i]]))+
+    geom_histogram(bins=20)+
+    ggtitle(paste0("Frequency of ", i))+  xlab(paste0(i, " Expression")) + 
+    ylab(paste0(i, " Frequency"))+ newBlankTheme+
+    scale_color_manual(values = colorPalette)
 
-  #Histogram
-GeneName_Histogram <- ggplot(GeneExp_Cov, aes(x=gene))+
-  geom_histogram()+ stat_bin(bins=30, binwidth = 0.05)+
-  labs(title="Gene Frequency", x="Frequency", y="Gene Expression")+
-  newBlankTheme+ scale_color_manual(values = colorPalette)
+  Scatterplot1 <- ggplot(Subset_GeneExp_Cov, aes(x=mat_BMI, y=.data[[i]]))+
+    geom_point()+ ggtitle(paste0("Maternal BMI compared to ", i))+
+    xlab(bquote('Maternal BMI'(kg/m^2)))+ ylab(paste0(i, " Expression"))+
+    newBlankTheme+ scale_color_manual(values = colorPalette)
+  
+  Boxplot1 <- ggplot(Subset_GeneExp_Cov,aes(x = BMI_Scale, y = .data[[i]],
+    color = VitaminD_Levels)) + geom_boxplot()+ 
+    ggtitle(paste0(i, " Across BMI Classes and Vitamin D Levels"))+
+    xlab("BMI Scale")+ ylab(paste0(i, " Expression"))+
+    labs(color="Vitamin D Levels")+ 
+    newBlankTheme + scale_color_manual(values = colorPalette)
+  
+all_plots[[i]]<- list(Histogram1, Scatterplot1, Boxplot1)}
+return(all_plots)}
 
-GeneName_Histogram
+plots <- Plots(Subset_GeneExp_Cov = Subset_GeneExp_Cov, myTestList = myTestList)
+grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3)
 
-#Scatterplot
-GeneName_Scatterplot <- ggplot(GeneExp_Cov, aes(x=mat_BMI, y=gene))+
-  geom_point()+ 
-  ggtitle(paste0("Maternal BMI compared to ", length(List_of_Genes)))+ 
-  xlab(bquote('Maternal BMI'(kg/m^2)))+ ylab("Gene")+
-  xlim(15, 65)+
-  newBlankTheme+ scale_color_manual(values = colorPalette)
-GeneName_Scatterplot
-
-
-#Boxplot
-GeneName_Boxplot <- ggplot(GeneExp_Cov,aes(x = BMI_Scale, y = gene,
-  color = VitaminD_Levels)) +
-  geom_boxplot()+ 
-  labs(title="Gene Across BMI Classes and Vitamin D Levels", x="BMI Scale",
-       y="Gene", color="Vitamin D Levels")+ 
-  scale_color_manual(values = colorPalette)+ newBlankTheme
-
-
-}
-
+#plot_grid(plotlist=unlist(plots, recursive=FALSE), ncol=3)
 ```
