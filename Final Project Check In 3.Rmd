@@ -1,0 +1,194 @@
+---
+title: "Final Project Check In 1"
+output: pdf_document
+date: "2026-10-19"
+---
+In addition to the links provided before each chunk, I used the following as tutoring to create my code. Chat.Dartmouth, Foundations of Data Science Notes, Data Wrangling Notes.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load in libraries
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(car)
+library(gridExtra)
+```
+
+Read dataset files
+```{r}
+GeneCovariate=read.csv(file="GSE85307_covar-1.csv", row.names=1)
+GeneExpression= read.csv(file="GSE85307_geneExpression.csv", row.names = 1)
+GeneName= read.csv(file="GSE85307_geneNames.csv", row.names = 1)
+```
+
+Create a row of column names so I can more easily combine with Gene Covariate.
+Then, transpose Gene Expression dataframe so the geoID row becomes a geoID column
+```{r}
+GeneExpression["geoID",]<- colnames(GeneExpression)
+transposedGeneExpression <- as.data.frame((t(GeneExpression)))
+```
+
+Clean Gene Covariate dataframe by removing all text prior to the actual number.
+https://rfortherestofus.com/2024/05/remove-unwanted-texts-with-regex
+```{r}
+Cleaned_GeneCovariate <- GeneCovariate %>%
+mutate(
+  mat_age_yrs = str_remove_all(mat_age_yrs, "age_years: "),
+  preg_preeclampsia = str_remove_all(preg_preeclampsia, 
+                                     "pregnancy_condition: "),
+  delivery_gestAge_wks= str_remove_all(delivery_gestAge_wks,
+                                       "gestation_weeks: "),
+  sampleCollection_gestAge_wks = str_remove_all(sampleCollection_gestAge_wks, 
+                                              "blood_draw_at_gestation_week: "),
+  batch_Microarray= str_remove_all(batch_Microarray, 
+                                 "microarray_hybridization_date: "),
+  mat_BMI = str_remove_all(mat_BMI, "bmi_kg/m2: "),
+  mat_vitD = str_remove_all(mat_vitD, 
+                          "vitamind_25\\(0h\\)_ng/ml_whole_blood_baseline: "),
+  mat_asthma = str_remove_all(mat_asthma, "asthma_0=healthy_1=asthmatic: "))
+```
+
+Transformed mat_asthma to corresponding designation (0 is Healthy, 1 is Asthamatic) as assigned within column.
+Transformed batch_Microarray column from a character column to a categorical column.
+```{r}
+Cleaned_GeneCovariate$Asthma <- factor(ifelse(
+  Cleaned_GeneCovariate$mat_asthma == 1,'Asthmatic','Healthy'))
+
+Cleaned_GeneCovariate$batch_Microarray <- 
+  factor(Cleaned_GeneCovariate$batch_Microarray)
+```
+Mutate the Gene Expression and Gene Covariate dataframes so the columns imported from the Gene Covariate dataset and the Gene Expression dataset are numeric, not characters
+https://stackoverflow.com/questions/67306573/converting-multiple-columns-to-double-type-in-r-using-dplyr
+https://www.geeksforgeeks.org/r-language/convert-multiple-columns-to-numeric-using-dplyr/ 
+```{r}
+Cleaned_GeneCovariate <- Cleaned_GeneCovariate %>%
+  mutate_at(vars(2, 4, 5, 7, 8), as.numeric)
+
+transposedGeneExpression <- transposedGeneExpression %>%
+  mutate(across(1:500, as.numeric))
+```
+
+Merge the transposed Gene Expression and the Cleaned Gene Covariate datasets together. Dropped mat_asthma variable as this is now represented by Asthma variable.
+```{r}
+GeneExp_Cov <- merge(transposedGeneExpression, Cleaned_GeneCovariate, 
+                      by="geoID", all=TRUE) %>%
+  select(-mat_asthma)
+```
+
+Create a column called GeneNumber in the GeneName dataset so I can more easily connect the gene number with the gene name. 
+```{r}
+GeneName[,"GeneNumber"] <- rownames(GeneName)
+```
+
+Create three categorical variable from continuous variables.
+Provided cutoff weights for BMI categories: https://pmc.ncbi.nlm.nih.gov/articles/PMC10914897/
+Provided cutoff weeks for trimesters: https://my.clevelandclinic.org/health/articles/pregnancy 
+https://stackoverflow.com/questions/61293089/recoding-continuous-variable-into-categorical-with-specific-categories-in-r-u
+Provided cutoff weeks for Vitamin D: https://pmc.ncbi.nlm.nih.gov/articles/PMC3540805/
+```{r}
+GeneExp_Cov <- GeneExp_Cov %>%
+  mutate(BMI_Scale = case_when(
+    mat_BMI <= 18.5 ~ "Underweight",
+    mat_BMI >18.5 & mat_BMI <25 ~ "Normal Weight",
+    mat_BMI  >=25 & mat_BMI <30 ~"Overweight",
+    mat_BMI >=30 ~ "Obese"))
+
+GeneExp_Cov <- GeneExp_Cov %>%
+  mutate(sampleCollection_trimester = case_when(
+    sampleCollection_gestAge_wks <= 13 ~ "First Trimester",
+    sampleCollection_gestAge_wks >13 & 
+      sampleCollection_gestAge_wks<= 28 ~ "Second Trimester",
+    sampleCollection_gestAge_wks > 28 ~"Third Trimester"))
+
+GeneExp_Cov <- GeneExp_Cov%>%
+  mutate(VitaminD_Levels = case_when(
+    mat_vitD < 10 ~ "Severe Deficiency",
+    mat_vitD >= 10 & mat_vitD<32 ~ "Insufficiency",
+    mat_vitD>=32 & mat_vitD<100 ~ "Adequacy",
+    mat_vitD>= 100~ "Toxicity"))
+```
+
+Create Theme and color palette.
+Used same base theme that I used in the HW3.
+https://stackoverflow.com/questions/40675778/center-plot-title-in-ggplot2
+```{r}
+newBlankTheme <- theme(
+  #Panel.grid to set color and weight for background lines
+   panel.grid=element_line(colour = "lightgrey", linewidth = rel(0.5)),
+  #Axis.line to help set axes color and weight
+   #axis.line = element_line(colour = "black", linewidth = rel(1)),
+  #Plot.background to set the background color of the plots
+   plot.background = element_rect(fill = "white"),
+  #panel.background to color the individual panels between the background lines
+   panel.background = element_blank(),
+  #Legend.key to set background color of the legend
+   legend.key = element_rect(fill = 'white'), 
+  #Legend.position to position the legend (on the right of the plot)
+   legend.position = 'right',
+  plot.title=element_text(hjust=0.5))
+
+colorPalette= c("darkgreen", "blue", "gold2", "hotpink1")
+```
+
+Pick one gene. First called the gene number so I could find the corresponding gene name. Then, extracted the column that corresponds to that gene number (commented out so it would not rerun) and defined that column as the gene name that was extracted from the gene name dataset.
+
+```{r}
+Subset_GeneExp_Cov <- GeneExp_Cov[, c("geoID", "8154531", "8035095", "8130598", 
+      "mat_age_yrs", "preg_preeclampsia","delivery_gestAge_wks", 
+      "sampleCollection_gestAge_wks", "batch_Microarray", "mat_BMI", "mat_vitD", 
+      "Asthma", "BMI_Scale", "sampleCollection_trimester", "VitaminD_Levels" )]
+
+colnames(Subset_GeneExp_Cov)[2:4]<- c(GeneName[GeneName$GeneNumber==8154531, 1],
+                                 GeneName[GeneName$GeneNumber==8035095, 1],
+                                 GeneName[GeneName$GeneNumber==8130598, 1])
+```
+
+Create Function
+https://www.r-bloggers.com/2023/09/how-to-reorder-boxplots-in-r-a-comprehensive-guide/
+https://www.geeksforgeeks.org/r-language/how-to-use-superscript-with-ggplot2-in-r/
+https://stackoverflow.com/questions/8174237/selecting-non-consecutive-columns-in-r-tables 
+https://stackoverflow.com/questions/67200484/grid-arrange-side-by-side-plots-being-squished-to-small-size-in-r-markdown
+https://stackoverflow.com/questions/76965753/control-jitter-of-geom-point-with-consistent-placement-in-ggplot
+```{r, fig.height=12, fig.width=15}
+Plots <- function(Subset_GeneExp_Cov, myTestList){
+  
+#Reorder BMI Scale and Vitamin D Scale
+Subset_GeneExp_Cov$BMI_Scale <- factor(Subset_GeneExp_Cov$BMI_Scale, 
+        levels=c("Underweight", "Normal Weight", "Overweight", "Obese"))
+Subset_GeneExp_Cov$VitaminD_Levels <- factor(Subset_GeneExp_Cov$VitaminD_Levels, 
+        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))
+
+myTestList <- colnames(Subset_GeneExp_Cov)[2:4]
+all_plots <- list()
+
+for (i in myTestList){
+  Histogram1 <- ggplot(Subset_GeneExp_Cov, aes(x=.data[[i]]))+
+    geom_histogram(bins=20)+
+    ggtitle(paste0("Frequency of ", i))+  xlab(paste0(i, " Expression")) + 
+    ylab(paste0(i, " Frequency"))+ newBlankTheme+
+    scale_color_manual(values = colorPalette)
+
+  Scatterplot1 <- ggplot(Subset_GeneExp_Cov, aes(x=mat_BMI, y=.data[[i]]))+
+    geom_point()+ ggtitle(paste0("Maternal BMI compared to ", i))+
+    xlab(bquote('Maternal BMI'(kg/m^2)))+ ylab(paste0(i, " Expression"))+
+    newBlankTheme+ scale_color_manual(values = colorPalette)
+  
+  Boxplot1 <- ggplot(Subset_GeneExp_Cov,aes(x = BMI_Scale, y = .data[[i]],
+    color = VitaminD_Levels)) + geom_boxplot()+ 
+    ggtitle(paste0(i, " Across BMI Classes and Vitamin D Levels"))+
+    xlab("BMI Scale")+ ylab(paste0(i, " Expression"))+
+    labs(color="Vitamin D Levels")+ 
+    newBlankTheme + scale_color_manual(values = colorPalette)+
+    geom_point(position=position_jitterdodge(0.1, dodge.width = 0.5))
+  
+all_plots[[i]]<- list(Histogram1, Scatterplot1, Boxplot1)}
+return(all_plots)}
+
+plots <- Plots(Subset_GeneExp_Cov = Subset_GeneExp_Cov, myTestList = myTestList)
+grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3)
+```
