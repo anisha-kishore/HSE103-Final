@@ -17,6 +17,7 @@ library(ggplot2)
 library(ggpubr)
 library(car)
 library(gridExtra)
+library(pheatmap)
 ```
 
 Read dataset files
@@ -76,8 +77,8 @@ transposedGeneExpression <- transposedGeneExpression %>%
 Merge the transposed Gene Expression and the Cleaned Gene Covariate datasets together. Dropped mat_asthma variable as this is now represented by Asthma variable.
 ```{r}
 GeneExp_Cov <- merge(transposedGeneExpression, Cleaned_GeneCovariate, 
-                      by="geoID", all=TRUE) %>%
-  select(-mat_asthma)
+                by="geoID", all=TRUE) %>%
+                select(-mat_asthma)
 ```
 
 Create a column called GeneNumber in the GeneName dataset so I can more easily connect the gene number with the gene name. 
@@ -190,5 +191,46 @@ all_plots[[i]]<- list(Histogram1, Scatterplot1, Boxplot1)}
 return(all_plots)}
 
 plots <- Plots(Subset_GeneExp_Cov = Subset_GeneExp_Cov, myTestList = myTestList)
-grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3)
+grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3, nrow=3)
 ```
+
+Table of Summary Statistics
+```{r}
+```
+
+
+Heat Map Data Frame
+```{r}
+heatmap_dataframe  <- GeneExp_Cov[, c("8154531", "8035095", "8130598", "8059776",
+              "8097647", "7955450", "8160168", "8039316", "8101284", "8041467")]
+
+rownames(heatmap_dataframe)=GeneExp_Cov$geoID
+```
+
+
+```{r}
+pheatData <- GeneExp_Cov[,c('BMI_Scale', 'VitaminD_Levels')]
+rownames(pheatData)=GeneExp_Cov$geoID
+
+pheatColors <- list(BMI_Scale = c('Underweight' = 'chocolate4',
+  'Normal Weight' = 'yellow2','Overweight' = 'tomato3','Obese' = 'green2'),
+                    VitaminD_Levels = c('Severe Deficiency' = 'mediumorchid3',
+  'Insufficiency' = 'deeppink2','Adequacy' = 'skyblue','Toxicity' = 'lemonchiffon1'))
+
+# Generate heatmap
+pheatmap(heatmap_dataframe,
+         clustering_distance_cols = 'euclidean',
+         clustering_distance_rows = 'euclidean',
+         annotation_row = pheatData,
+         annotation_colors = pheatColors)
+```
+Heat Map
+```{r}
+Subset_GeneExp_Cov
+pheatmap(Subset_GeneExp_Cov)
+```
+Additional Plot
+```{r}
+
+```
+
