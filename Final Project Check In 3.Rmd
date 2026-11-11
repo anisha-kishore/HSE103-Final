@@ -208,6 +208,11 @@ label(Subset_GeneExp_Cov$VitaminD_Levels) <- "Vitamin D Levels"
 label(Subset_GeneExp_Cov$mat_vitD) <- "Maternal Vitamin D"
 label(Subset_GeneExp_Cov$mat_age_yrs) <- "Maternal Age (yrs)"
 
+Subset_GeneExp_Cov$BMI_Scale <- factor(Subset_GeneExp_Cov$BMI_Scale, 
+        levels=c("Underweight", "Normal Weight", "Overweight", "Obese"))
+Subset_GeneExp_Cov$VitaminD_Levels <- factor(Subset_GeneExp_Cov$VitaminD_Levels, 
+        levels=c("Severe Deficiency", "Insufficiency", "Adequacy", "Toxicity"))
+
 table1( ~mat_BMI + VitaminD_Levels + mat_vitD + mat_age_yrs| BMI_Scale, 
         data=Subset_GeneExp_Cov, rowlabelhead="BMI Scale")
 ```
