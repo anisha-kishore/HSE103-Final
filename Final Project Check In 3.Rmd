@@ -18,6 +18,7 @@ library(ggpubr)
 library(car)
 library(gridExtra)
 library(pheatmap)
+library(table1)
 ```
 
 Read dataset files
@@ -63,6 +64,7 @@ Cleaned_GeneCovariate$Asthma <- factor(ifelse(
 Cleaned_GeneCovariate$batch_Microarray <- 
   factor(Cleaned_GeneCovariate$batch_Microarray)
 ```
+
 Mutate the Gene Expression and Gene Covariate dataframes so the columns imported from the Gene Covariate dataset and the Gene Expression dataset are numeric, not characters
 https://stackoverflow.com/questions/67306573/converting-multiple-columns-to-double-type-in-r-using-dplyr
 https://www.geeksforgeeks.org/r-language/convert-multiple-columns-to-numeric-using-dplyr/ 
@@ -133,11 +135,10 @@ newBlankTheme <- theme(
    legend.position = 'right',
   plot.title=element_text(hjust=0.5))
 
-colorPalette= c("darkgreen", "blue", "gold2", "hotpink1")
+colorPalette= c("hotpink1", "blue", "darkgreen", "gold2")
 ```
 
 Pick one gene. First called the gene number so I could find the corresponding gene name. Then, extracted the column that corresponds to that gene number (commented out so it would not rerun) and defined that column as the gene name that was extracted from the gene name dataset.
-
 ```{r}
 Subset_GeneExp_Cov <- GeneExp_Cov[, c("geoID", "8154531", "8035095", "8130598", 
       "mat_age_yrs", "preg_preeclampsia","delivery_gestAge_wks", 
@@ -155,7 +156,10 @@ https://www.geeksforgeeks.org/r-language/how-to-use-superscript-with-ggplot2-in-
 https://stackoverflow.com/questions/8174237/selecting-non-consecutive-columns-in-r-tables 
 https://stackoverflow.com/questions/67200484/grid-arrange-side-by-side-plots-being-squished-to-small-size-in-r-markdown
 https://stackoverflow.com/questions/76965753/control-jitter-of-geom-point-with-consistent-placement-in-ggplot
-```{r, fig.height=12, fig.width=15}
+Used Claude to help figure out how to italicize just the Gene Name
+```{r, fig.height=12, fig.width=18}
+set.seed(100178)
+
 Plots <- function(Subset_GeneExp_Cov, myTestList){
   
 #Reorder BMI Scale and Vitamin D Scale
@@ -170,32 +174,41 @@ all_plots <- list()
 for (i in myTestList){
   Histogram1 <- ggplot(Subset_GeneExp_Cov, aes(x=.data[[i]]))+
     geom_histogram(bins=20)+
-    ggtitle(paste0("Frequency of ", i))+  xlab(paste0(i, " Expression")) + 
-    ylab(paste0(i, " Frequency"))+ newBlankTheme+
+    ggtitle(bquote("Frequency of" ~ italic(.(i))))+  
+    xlab(bquote(italic(.(i)) ~ " Expression")) + 
+    ylab(bquote(italic(.(i)) ~ " Frequency"))+ newBlankTheme+
     scale_color_manual(values = colorPalette)
 
   Scatterplot1 <- ggplot(Subset_GeneExp_Cov, aes(x=mat_BMI, y=.data[[i]]))+
-    geom_point()+ ggtitle(paste0("Maternal BMI compared to ", i))+
-    xlab(bquote('Maternal BMI'(kg/m^2)))+ ylab(paste0(i, " Expression"))+
+    geom_point()+ ggtitle(bquote("Maternal BMI compared to" ~ italic(.(i))))+
+    xlab(bquote('Maternal BMI'(kg/m^2)))+ ylab(bquote(italic(.(i)) ~ " Expression"))+
     newBlankTheme+ scale_color_manual(values = colorPalette)
   
   Boxplot1 <- ggplot(Subset_GeneExp_Cov,aes(x = BMI_Scale, y = .data[[i]],
     color = VitaminD_Levels)) + geom_boxplot()+ 
-    ggtitle(paste0(i, " Across BMI Classes and Vitamin D Levels"))+
-    xlab("BMI Scale")+ ylab(paste0(i, " Expression"))+
+    ggtitle(bquote(italic(.(i)) ~ "Across BMI Classes and Vitamin D Levels"))+
+    xlab("BMI Scale")+ ylab(bquote(italic(.(i)) ~ " Expression"))+
     labs(color="Vitamin D Levels")+ 
     newBlankTheme + scale_color_manual(values = colorPalette)+
     geom_point(position=position_jitterdodge(0.1, dodge.width = 0.5))
   
 all_plots[[i]]<- list(Histogram1, Scatterplot1, Boxplot1)}
-return(all_plots)}
+return(all_plots)
+}
 
 plots <- Plots(Subset_GeneExp_Cov = Subset_GeneExp_Cov, myTestList = myTestList)
-grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3, nrow=3)
+grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3)
 ```
-
 Table of Summary Statistics
+https://blog.djnavarro.net/posts/2024-06-21_table1/
 ```{r}
+label(Subset_GeneExp_Cov$mat_BMI) <- "Maternal BMI"
+label(Subset_GeneExp_Cov$VitaminD_Levels) <- "Vitamin D Levels"
+label(Subset_GeneExp_Cov$mat_vitD) <- "Maternal Vitamin D"
+label(Subset_GeneExp_Cov$mat_age_yrs) <- "Maternal Age (yrs)"
+
+table1( ~mat_BMI + VitaminD_Levels + mat_vitD + mat_age_yrs| BMI_Scale, 
+        data=Subset_GeneExp_Cov, rowlabelhead="BMI Scale")
 ```
 
 
@@ -203,12 +216,11 @@ Heat Map Data Frame
 ```{r}
 heatmap_dataframe  <- GeneExp_Cov[, c("8154531", "8035095", "8130598", "8059776",
               "8097647", "7955450", "8160168", "8039316", "8101284", "8041467")]
-
 rownames(heatmap_dataframe)=GeneExp_Cov$geoID
 ```
 
-
-```{r}
+Create Heat Map
+```{r, fig.height=24, fig.width=6}
 pheatData <- GeneExp_Cov[,c('BMI_Scale', 'VitaminD_Levels')]
 rownames(pheatData)=GeneExp_Cov$geoID
 
@@ -224,13 +236,32 @@ pheatmap(heatmap_dataframe,
          annotation_row = pheatData,
          annotation_colors = pheatColors)
 ```
-Heat Map
-```{r}
-Subset_GeneExp_Cov
-pheatmap(Subset_GeneExp_Cov)
-```
 Additional Plot
+https://www.geeksforgeeks.org/r-language/circular-barplots-and-customisation-in-r/
+https://r-graph-gallery.com/297-circular-barplot-with-groups.html
 ```{r}
+circular_boxplot_data <- Subset_GeneExp_Cov %>%
+  # Convert to long format
+  tidyr::pivot_longer(cols = c(DENND4C,CYP4F11, LPAL2),
+                      names_to = 'Gene_Name',
+                      values_to = 'Gene_Expression') %>%
+  relocate(geoID, Gene_Name, Gene_Expression, mat_BMI, BMI_Scale, mat_vitD, VitaminD_Levels, everything())
+```
 
+```{r}
+ggplot(circular_boxplot_data, aes(x=BMI_Scale, y=Gene_Expression, fill=VitaminD_Levels))+
+  geom_bar(stat="identity")+
+  coord_polar(start=0)+
+  scale_fill_manual(values = colorPalette)+
+  newBlankTheme+
+  labs(y="Gene Expression", fill="Vitamin D Levels", title="Gene Expression by Maternal BMI")
+  
+```
+#Used Claude to help cite
+```{r}
+knitr::write_bib(
+  c('base', 'tidyverse', 'dplyr', 'ggplot2', 'ggpubr', 'car',
+    'gridExtra', 'pheatmap', 'table1'),
+  file = 'C:/Users/Anisha/OneDrive/Desktop/references.bib')
 ```
 
