@@ -199,6 +199,7 @@ return(all_plots)
 plots <- Plots(Subset_GeneExp_Cov = Subset_GeneExp_Cov, myTestList = myTestList)
 grid.arrange(grobs=unlist(plots, recursive=FALSE), ncol=3)
 ```
+
 Table of Summary Statistics
 https://blog.djnavarro.net/posts/2024-06-21_table1/
 ```{r}
@@ -240,7 +241,7 @@ Additional Plot
 https://www.geeksforgeeks.org/r-language/circular-barplots-and-customisation-in-r/
 https://r-graph-gallery.com/297-circular-barplot-with-groups.html
 ```{r}
-circular_boxplot_data <- Subset_GeneExp_Cov %>%
+circular_barplot_data <- Subset_GeneExp_Cov %>%
   # Convert to long format
   tidyr::pivot_longer(cols = c(DENND4C,CYP4F11, LPAL2),
                       names_to = 'Gene_Name',
@@ -248,8 +249,9 @@ circular_boxplot_data <- Subset_GeneExp_Cov %>%
   relocate(geoID, Gene_Name, Gene_Expression, mat_BMI, BMI_Scale, mat_vitD, VitaminD_Levels, everything())
 ```
 
+Create Circular Barplot. Color by vitamin D level, split based on BMI scale.
 ```{r}
-ggplot(circular_boxplot_data, aes(x=BMI_Scale, y=Gene_Expression, fill=VitaminD_Levels))+
+ggplot(circular_barplot_data, aes(x=BMI_Scale, y=Gene_Expression, fill=VitaminD_Levels))+
   geom_bar(stat="identity")+
   coord_polar(start=0)+
   scale_fill_manual(values = colorPalette)+
@@ -257,7 +259,7 @@ ggplot(circular_boxplot_data, aes(x=BMI_Scale, y=Gene_Expression, fill=VitaminD_
   labs(y="Gene Expression", fill="Vitamin D Levels", title="Gene Expression by Maternal BMI")
   
 ```
-#Used Claude to help cite
+Used Claude to help cite
 ```{r}
 knitr::write_bib(
   c('base', 'tidyverse', 'dplyr', 'ggplot2', 'ggpubr', 'car',
